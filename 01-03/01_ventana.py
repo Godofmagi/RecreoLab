@@ -16,4 +16,11 @@ titulo = ctk.CTkLabel(
 )
 titulo.grid(row=0, column=0, padx=20, pady=20)
 
+subtitulo = ctk.CTkLabel(
+    ventana,
+    text ="Equipo formado por Borgazzi Dante, Gonzales Luca y Revainera Thiago",
+    font=("Comic sans", 14, "bold")
+)
+subtitulo.grid(row=1,column=0 ,padx=30, pady= 30)
+
 ventana.mainloop()
