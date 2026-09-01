@@ -1,11 +1,11 @@
 inicio
-corregir subtitulos
+corregir subtitulos (están casi cambiados todos, me faltaron los 4 de abajo)
 randomizer productos en la vista previa
 
 kiosco
-color en la categoría de productos no seleccionados
+color en la categoría de productos no seleccionados (Arreglado)
 mover touch a principio
-checar tamaño en compus chicas(apartado)
+checar tamaño en compus chicas(apartado) (Hice una barra lateral para scrollear)
 corregir subtitulos
 agregar mas productos (lo que podamos) tal vez categorias
 corregir precios

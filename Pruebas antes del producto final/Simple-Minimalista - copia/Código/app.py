@@ -33,7 +33,7 @@ BROWN_SOFT = "#F8EFE7"
 FONT = "Segoe UI"
 
 PRODUCT_STYLES = {
-    "Agua": {"bg": BLUE_SOFT, "fg": ACCENT, "category": "Bebida"},
+    "Agua SmartWater": {"bg": BLUE_SOFT, "fg": ACCENT, "category": "Bebida"},
     "Jugo": {"bg": ORANGE_SOFT, "fg": "#D96B00", "category": "Bebida"},
     "Alfajor": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Snack"},
     "Galletitas": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Snack"},
@@ -43,7 +43,7 @@ PRODUCT_STYLES = {
 
 
 PRODUCT_IMAGE_FILES = {
-    "Agua": "agua",
+    "Agua SmartWater": "agua",
     "Jugo": "jugo",
     "Alfajor": "alfajor",
     "Galletitas": "galletitas",
@@ -81,11 +81,15 @@ class Aplicacion:
         ctk.set_default_color_theme("blue")
 
         self.ventana = ctk.CTk(fg_color=BG)
-        self.ventana.title("RecreoLab | Proyecto")
+        self.ventana.title("RecreoLab Minimalista")
         self.ventana.geometry("1280x800")
         self.ventana.minsize(1120, 720)
         self.ventana.grid_columnconfigure(0, weight=1)
-        self.ventana.grid_rowconfigure(1, weight=1)
+        self.ventana.grid_rowconfigure(0, weight=1)
+
+        self.contenedor = ctk.CTkScrollableFrame(self.ventana, fg_color=BG, corner_radius=0)
+        self.contenedor.grid(row=0, column=0, sticky="nsew")
+        self.contenedor.grid_columnconfigure(0, weight=1)
 
         self.busqueda_var = ctk.StringVar(master=self.ventana, value="")
         self.categoria_var = ctk.StringVar(master=self.ventana, value="Todos")
@@ -103,7 +107,7 @@ class Aplicacion:
     def crear_imagenes_producto(self):
     
         archivos = {
-            "Agua": "agua.png",
+            "Agua SmartWater": "agua.png",
             "Jugo": "jugo.png",
             "Alfajor": "alfajor.png",
             "Galletitas": "galletitas.png",
@@ -191,7 +195,7 @@ class Aplicacion:
     # Layout principal
     def crear_encabezado(self):
         self.header = ctk.CTkFrame(
-            self.ventana,
+            self.contenedor,
             fg_color=CARD,
             corner_radius=24,
             border_width=1,
@@ -225,7 +229,7 @@ class Aplicacion:
 
         ctk.CTkLabel(
             marca_wrap,
-            text="Una interfaz limpia y elegante para vender, consultar y decidir rápido.",
+            text="Bienvenido a nuestro kiosco virtual. Explora, compra y disfruta de nuestros productos.",
             font=(FONT, 14),
             text_color=TEXT_SECONDARY,
         ).grid(row=2, column=1, sticky="w")
@@ -262,7 +266,7 @@ class Aplicacion:
             self.nav_buttons[clave] = boton
 
     def crear_cuerpo(self):
-        self.body = ctk.CTkFrame(self.ventana, fg_color="transparent")
+        self.body = ctk.CTkFrame(self.contenedor, fg_color="transparent")
         self.body.grid(row=1, column=0, padx=24, pady=(2, 8), sticky="nsew")
         self.body.grid_columnconfigure(0, weight=1)
         self.body.grid_rowconfigure(0, weight=1)
@@ -291,7 +295,7 @@ class Aplicacion:
 
     def crear_footer(self):
         footer = ctk.CTkFrame(
-            self.ventana,
+            self.contenedor,
             fg_color=CARD,
             corner_radius=18,
             border_width=1,
@@ -357,7 +361,7 @@ class Aplicacion:
 
         ctk.CTkLabel(
             hero,
-            text="Un kiosco con look moderno, pensado para navegar rápido, mostrar precios claros y transmitir una identidad más premium.",
+            text="Una simulación de un kiosco que te permite vender, consultar y decidir rápido.",
             font=(FONT, 16),
             text_color=TEXT_SECONDARY,
             justify="left",
@@ -441,7 +445,7 @@ class Aplicacion:
         )
         ctk.CTkLabel(
             side,
-            text="Algunos productos que se muestran en la experiencia renovada.",
+            text="Estos son algunos de nuestros productos:",
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
         ).grid(row=1, column=0, padx=22, pady=(0, 12), sticky="w")
@@ -606,6 +610,7 @@ class Aplicacion:
         self.metricas_compra.grid_columnconfigure((0, 1), weight=1)
         self.chip_items = self.crear_chip_horizontal(self.metricas_compra, 0, "Items", "0", wide=True)
         self.chip_ticket = self.crear_chip_horizontal(self.metricas_compra, 1, "Ticket", self.moneda(0), wide=True)
+        
 
         self.detalle = ctk.CTkTextbox(
             compra,
@@ -679,20 +684,26 @@ class Aplicacion:
             border_width=1,
             border_color=BORDER,
             width=170 if wide else 128,
-            height=64,
         )
         chip.grid(row=0, column=column, padx=(0 if column == 0 else 8, 0), sticky="ew")
-        chip.grid_propagate(False)
         chip.grid_columnconfigure(0, weight=1)
 
         titulo_lbl = ctk.CTkLabel(chip, text=titulo, font=(FONT, 11, "bold"), text_color=TEXT_SECONDARY)
-        titulo_lbl.grid(row=0, column=0, padx=14, pady=(12, 0), sticky="w")
+        titulo_lbl.grid(row=0, column=0, padx=14, pady=(12, 2), sticky="w")
 
         valor_lbl = ctk.CTkLabel(chip, text=valor, font=(FONT, 18, "bold"), text_color=TEXT)
-        valor_lbl.grid(row=1, column=0, padx=14, pady=(0, 10), sticky="w")
+        valor_lbl.grid(row=1, column=0, padx=14, pady=(0, 12), sticky="w")
 
         chip.value_label = valor_lbl
         return chip
+    
+    def actualizar_texto_categorias(self):
+        seleccionada = self.categoria_var.get()
+        for valor, boton in self.categorias._buttons_dict.items():
+            if valor == seleccionada:
+                boton.configure(text_color="white")
+            else:
+                boton.configure(text_color=TEXT)
 
     # Pantalla del Presupuesto 
     def crear_presupuesto(self):
@@ -845,6 +856,8 @@ class Aplicacion:
     def refrescar(self):
         for widget in self.catalogo.winfo_children():
             widget.destroy()
+        
+        self.actualizar_texto_categorias()
 
         stock_total = sum(producto.stock for producto in self.productos)
         self.chip_productos.value_label.configure(text=str(len(self.productos)))
