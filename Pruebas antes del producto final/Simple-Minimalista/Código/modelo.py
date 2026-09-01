@@ -11,12 +11,12 @@ class Producto:
 
 def catalogo_inicial():
     return [
-        Producto("A01", "Agua", 1000, 8),
-        Producto("A02", "Jugo", 1200, 6),
-        Producto("A03", "Alfajor", 800, 10),
-        Producto("A04", "Galletitas", 900, 2),
-        Producto("A05", "Barrita", 700, 5),
-        Producto("A06", "Caramelos", 300, 0),
+        Producto("A01", "Agua", 1600, 8),
+        Producto("A02", "Jugo", 2100, 6),
+        Producto("A03", "Alfajor", 500, 10),
+        Producto("A04", "Galletitas", 1200, 2),
+        Producto("A05", "Barrita", 1200, 2),
+        Producto("A06", "Caramelos", 150,0),
     ]
 
 

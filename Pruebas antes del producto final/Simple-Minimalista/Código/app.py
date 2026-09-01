@@ -68,7 +68,7 @@ class Aplicacion:
         self.preview_labels = []
         self.logo_image = None
 
-      
+
         self.base_dir = Path(__file__).resolve().parent
         self.assets_dir = self.base_dir / "assets" / "productos"
 
@@ -81,7 +81,7 @@ class Aplicacion:
         ctk.set_default_color_theme("blue")
 
         self.ventana = ctk.CTk(fg_color=BG)
-        self.ventana.title("RecreoLab Minimalista")
+        self.ventana.title("RecreoLab | Proyecto")
         self.ventana.geometry("1280x800")
         self.ventana.minsize(1120, 720)
         self.ventana.grid_columnconfigure(0, weight=1)
@@ -109,11 +109,8 @@ class Aplicacion:
             "Galletitas": "galletitas.png",
             "Barrita": "barrita.png",
             "Caramelos": "caramelos.png",
+            
         }
-
-        print("\n========== RECREOLAB v9: SOLO FOTOS REALES ==========")
-        print(f"APP EJECUTADO: {Path(__file__).resolve()}")
-        print(f"FOTOS:         {self.assets_dir}")
 
         faltantes = []
         for nombre, archivo in archivos.items():
@@ -134,9 +131,7 @@ class Aplicacion:
                 dark_image=image,
                 size=PRODUCT_IMAGE_DISPLAY_SIZE,
             )
-            print(f"[FOTO OK] {producto.nombre}: {ruta}")
-
-        print("LAS 6 FOTOS SE CARGARON. NO HAY ICONOS DE RESPALDO.\n")
+            
 
     def preparar_imagen_producto(self, ruta):
         

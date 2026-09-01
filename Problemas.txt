@@ -1,0 +1,24 @@
+inicio
+corregir subtitulos
+randomizer productos en la vista previa
+
+kiosco
+color en la categoría de productos no seleccionados
+mover touch a principio
+checar tamaño en compus chicas(apartado)
+corregir subtitulos
+agregar mas productos (lo que podamos) tal vez categorias
+corregir precios
+cambiar nombre a productos específicos
+que se actualize el stock en tiempo real
+sonidos?
+
+presupuesto
+indicar exactamente cual es la combinación mas barata o cara
+combinaciones de mas de 2 productos 
+
+afuera de la aplicacion
+capaz crear apk
+cambiar icono del ejecutable
+ordenar archivos(si sos dante)
+borrar retro y ke la minimalista sea lo principal
