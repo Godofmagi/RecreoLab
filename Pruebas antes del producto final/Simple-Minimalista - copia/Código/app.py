@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from tkinter import messagebox
 from functools import partial
+from itertools import combinations
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pathlib import Path
 from modelo import catalogo_inicial, agregar, confirmar, total_carrito
@@ -66,6 +67,7 @@ class Aplicacion:
         self.imagenes_producto = {}
         self.nav_buttons = {}
         self.preview_labels = []
+        self.preview_offset = 0
         self.logo_image = None
 
 
@@ -102,6 +104,7 @@ class Aplicacion:
         self.crear_footer()
         self.cambiar_vista("inicio")
         self.refrescar()
+        self.rotar_preview()
 
     # Recursos visuales
     def crear_imagenes_producto(self):
@@ -347,7 +350,7 @@ class Aplicacion:
         badge.grid(row=0, column=0, padx=28, pady=(28, 16), sticky="w")
         ctk.CTkLabel(
             badge,
-            text="Nueva experiencia visual",
+            text="Un kiosco virtual en tu pantalla",
             font=(FONT, 12, "bold"),
             text_color=ACCENT,
         ).grid(row=0, column=0, padx=14, pady=8)
@@ -468,7 +471,7 @@ class Aplicacion:
         box_quote.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="ew")
         ctk.CTkLabel(
             box_quote,
-            text='"Limpio, intuitivo y con un look más profesional."',
+            text='Traido a ustedes por:',
             font=(FONT, 14, "bold"),
             text_color=TEXT,
             justify="left",
@@ -476,7 +479,7 @@ class Aplicacion:
         ).grid(row=0, column=0, padx=18, pady=(16, 6), sticky="w")
         ctk.CTkLabel(
             box_quote,
-            text="Ideal para una entrega visual más fuerte y una demo mucho más atractiva.",
+            text="Nombres y apellidos de los integrantes del grupo.",
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
             justify="left",
@@ -512,12 +515,12 @@ class Aplicacion:
         top.grid(row=0, column=0, padx=22, pady=(22, 10), sticky="ew")
         top.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(top, text="Productos destacados", font=(FONT, 22, "bold"), text_color=TEXT).grid(
+        ctk.CTkLabel(top, text="Lista de Productos", font=(FONT, 22, "bold"), text_color=TEXT).grid(
             row=0, column=0, sticky="w"
         )
         ctk.CTkLabel(
             top,
-            text="Diseño visual con miniaturas, estados claros de stock y acciones simples.",
+            text="Estos son los productos que ofrecemos, mostrando su cantidad disponible y su precio.",
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
         ).grid(row=1, column=0, pady=(2, 0), sticky="w")
@@ -793,8 +796,8 @@ class Aplicacion:
         )
 
         self.chip_opciones = self.crear_chip_vertical(derecha, 1, "Combinaciones", "0")
-        self.chip_minimo = self.crear_chip_vertical(derecha, 2, "Par más económico", "—")
-        self.chip_maximo = self.crear_chip_vertical(derecha, 3, "Par más alto", "—")
+        self.chip_minimo = self.crear_chip_vertical(derecha, 2, "Par más económico", "—", con_detalle=True)
+        self.chip_maximo = self.crear_chip_vertical(derecha, 3, "Par más alto", "—", con_detalle=True)
 
         ayuda = ctk.CTkFrame(derecha, fg_color=CARD_SOFT, corner_radius=18, border_width=1, border_color=BORDER)
         ayuda.grid(row=4, column=0, padx=20, pady=(8, 20), sticky="ew")
@@ -817,7 +820,7 @@ class Aplicacion:
 
         self.escribir(self.opciones, "Ingresá un presupuesto para ver opciones.")
 
-    def crear_chip_vertical(self, parent, row, titulo, valor):
+    def crear_chip_vertical(self, parent, row, titulo, valor, con_detalle=False):
         chip = ctk.CTkFrame(parent, fg_color=CARD_MUTED, corner_radius=18, border_width=1, border_color=BORDER)
         chip.grid(row=row, column=0, padx=20, pady=6, sticky="ew")
         chip.grid_columnconfigure(0, weight=1)
@@ -826,8 +829,14 @@ class Aplicacion:
             row=0, column=0, padx=16, pady=(14, 4), sticky="w"
         )
         value_label = ctk.CTkLabel(chip, text=valor, font=(FONT, 22, "bold"), text_color=TEXT)
-        value_label.grid(row=1, column=0, padx=16, pady=(0, 14), sticky="w")
+        value_label.grid(row=1, column=0, padx=16, pady=(0, 4 if con_detalle else 14), sticky="w")
         chip.value_label = value_label
+
+        if con_detalle:
+            detail_label = ctk.CTkLabel(chip, text="", font=(FONT, 12), text_color=TEXT_SECONDARY)
+            detail_label.grid(row=2, column=0, padx=16, pady=(0, 14), sticky="w")
+            chip.detail_label = detail_label
+
         return chip
 
     # Ayudadores 
@@ -842,15 +851,26 @@ class Aplicacion:
         caja.configure(state="disabled")
 
     def actualizar_preview_inicio(self):
-        destacados = [p for p in self.productos if p.stock > 0][:4]
-        for idx, (thumb, label) in enumerate(self.preview_labels):
-            if idx < len(destacados):
-                producto = destacados[idx]
-                thumb.configure(text="", image=self.imagenes_producto[producto.codigo], fg_color="transparent")
-                label.configure(text=f"{producto.nombre}  ·  {self.moneda(producto.precio)}")
-            else:
+        destacados = [p for p in self.productos if p.stock > 0]
+        if not destacados:
+            for thumb, label in self.preview_labels:
                 thumb.configure(image=None, text="", fg_color="#F0F0F2")
                 label.configure(text="")
+            return
+        total = len(destacados)
+        for idx, (thumb, label) in enumerate(self.preview_labels):
+            producto = destacados[(self.preview_offset + idx) % total]
+            thumb.configure(text="", image=self.imagenes_producto[producto.codigo], fg_color="transparent")
+            label.configure(text=f"{producto.nombre}  ·  {self.moneda(producto.precio)}")
+
+    def rotar_preview(self):
+        if not self.ventana.winfo_exists():
+            return
+        destacados = [p for p in self.productos if p.stock > 0]
+        if destacados:
+            self.preview_offset = (self.preview_offset + len(self.preview_labels)) % len(destacados)
+        self.actualizar_preview_inicio()
+        self.ventana.after(3000, self.rotar_preview)
 
     # cosa para actualizar el seleccionado de productos  en la pantalla 
     def refrescar(self):
@@ -1136,62 +1156,53 @@ class Aplicacion:
             )
             return
 
-        # IMPORTANTE: esta es la parte de combinaciones, cuidadito
+        # Busca combinaciones para cada cantidad posible de productos, de más a menos
         disponibles = [producto for producto in self.productos if producto.stock > 0]
+
+        # Límite de seguridad para evitar demasiadas combinaciones
+        LIMITE_PRODUCTOS = 20
+
+        # Si hay más de 20 productos, se toman solamente los 20 más baratos
+        if len(disponibles) > LIMITE_PRODUCTOS:
+            disponibles = sorted(disponibles, key=lambda producto: producto.precio)[:LIMITE_PRODUCTOS]
+
         opciones = []
+        for cantidad in range(len(disponibles), 1, -1):
+            for combo in combinations(disponibles, cantidad):
+                total = sum(producto.precio for producto in combo)
+                if total <= presupuesto:
+                    opciones.append((cantidad, combo, total, presupuesto-total))
 
-        for i in range(len(disponibles)):
-            for j in range(i + 1, len(disponibles)):
-                primero = disponibles[i]
-                segundo = disponibles[j]
-                total = primero.precio + segundo.precio
-
-                # Regla absoluta: si cuesta más que el presupuesto, no entra.
-                if total > presupuesto:
-                    continue
-
-                sobra = presupuesto - total
-                opciones.append((
-                    primero.nombre,
-                    segundo.nombre,
-                    primero.precio,
-                    segundo.precio,
-                    total,
-                    sobra,
-                ))
-
-        # mejores opciones (tipo las que te dejan más plata)
-        opciones.sort(key=lambda opcion: (-opcion[4], opcion[0], opcion[1]))
+        # más productos primero; dentro de cada cantidad, menos vuelto primero
+        opciones.sort(key=lambda opcion: (-opcion[0], opcion[3]))
 
         lineas = []
-        for primero, segundo, precio_1, precio_2, total, sobra in opciones:
-            # prohibe conbinaciones invalidas
-            if total > presupuesto or sobra < 0:
-                continue
-            lineas.append(
-                f"{primero} ({self.moneda(precio_1)}) + "
-                f"{segundo} ({self.moneda(precio_2)})\n"
-                f"Total: {self.moneda(total)}  ·  Te sobran {self.moneda(sobra)}"
-            )
+        cantidad_actual = None
+        for cantidad, combo, total, sobra in opciones:
+            if cantidad != cantidad_actual:
+                cantidad_actual = cantidad
+                etiqueta = "producto" if cantidad == 1 else "productos"
+                lineas.append(f"— {cantidad} {etiqueta} —")
+            nombres = " + ".join(f"{p.nombre} ({self.moneda(p.precio)})" for p in combo)
+            lineas.append(f"{nombres}\nTotal: {self.moneda(total)}  ·  Te sobran {self.moneda(sobra)}")
 
-        resultado = "\n\n".join(lineas) or "No hay pares disponibles para ese presupuesto."
+        resultado = "\n\n".join(lineas) or "No hay combinaciones posibles para ese presupuesto."
         self.escribir(self.opciones, resultado)
 
-        self.chip_opciones.value_label.configure(text=str(len(lineas)))
+        self.chip_opciones.value_label.configure(text=str(len(opciones)))
         if opciones:
-            validas = [opcion for opcion in opciones if opcion[4] <= presupuesto and opcion[5] >= 0]
-            if validas:
-                min_total = min(opcion[4] for opcion in validas)
-                max_total = max(opcion[4] for opcion in validas)
-                self.chip_minimo.value_label.configure(text=self.moneda(min_total))
-                self.chip_maximo.value_label.configure(text=self.moneda(max_total))
-            else:
-                self.chip_minimo.value_label.configure(text="—")
-                self.chip_maximo.value_label.configure(text="—")
+            min_opcion = min(opciones, key=lambda opcion: opcion[2])
+            max_opcion = max(opciones, key=lambda opcion: opcion[2])
+            self.chip_minimo.value_label.configure(text=self.moneda(min_opcion[2]))
+            self.chip_minimo.detail_label.configure(text=" + ".join(p.nombre for p in min_opcion[1]))
+            self.chip_maximo.value_label.configure(text=self.moneda(max_opcion[2]))
+            self.chip_maximo.detail_label.configure(text=" + ".join(p.nombre for p in max_opcion[1]))
         else:
             self.chip_minimo.value_label.configure(text="—")
+            self.chip_minimo.detail_label.configure(text="")
             self.chip_maximo.value_label.configure(text="—")
-
+            self.chip_maximo.detail_label.configure(text="")
+            
     def ejecutar(self):
         self.ventana.mainloop()
 

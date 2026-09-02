@@ -1,12 +1,15 @@
 inicio
-corregir subtitulos (están casi cambiados todos, me faltaron los 4 de abajo)
-randomizer productos en la vista previa
+corregir subtitulos  (A discutir con thiago)
+randomizer productos en la vista previa (realizado)
 
 kiosco
 color en la categoría de productos no seleccionados (Arreglado)
+
 mover touch a principio
-checar tamaño en compus chicas(apartado) (Hice una barra lateral para scrollear)
-corregir subtitulos
+
+checar tamaño en compus chicas(apartado) (Arreglado, en forma de barra lateral para scrollear)
+corregir subtitulos  (también discutir con thiago)
+
 agregar mas productos (lo que podamos) tal vez categorias
 corregir precios
 cambiar nombre a productos específicos
@@ -14,11 +17,11 @@ que se actualize el stock en tiempo real
 sonidos?
 
 presupuesto
-indicar exactamente cual es la combinación mas barata o cara
-combinaciones de mas de 2 productos 
+indicar exactamente cual es la combinación mas barata o cara (Realizado)
+combinaciones de mas de 2 productos  (realizado, y con extra sensual)
 
 afuera de la aplicacion
 capaz crear apk
 cambiar icono del ejecutable
 ordenar archivos(si sos dante)
-borrar retro y ke la minimalista sea lo principal
+borrar retro y ke la minimalista sea lo principal  (lo guarda borgazzi en caso de problema enorme :p)
