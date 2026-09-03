@@ -1,9 +1,11 @@
 import customtkinter as ctk
 from tkinter import messagebox
 from functools import partial
+from itertools import combinations
+from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pathlib import Path
-from modelo import catalogo_inicial, agregar, confirmar, total_carrito
+from modelo import catalogo_inicial, agregar, confirmar, total_carrito, cantidad_en_carrito
 
 
 #Colores para la interfaz
@@ -33,7 +35,7 @@ BROWN_SOFT = "#F8EFE7"
 FONT = "Segoe UI"
 
 PRODUCT_STYLES = {
-    "Agua": {"bg": BLUE_SOFT, "fg": ACCENT, "category": "Bebida"},
+    "Agua SmartWater": {"bg": BLUE_SOFT, "fg": ACCENT, "category": "Bebida"},
     "Jugo": {"bg": ORANGE_SOFT, "fg": "#D96B00", "category": "Bebida"},
     "Alfajor": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Snack"},
     "Galletitas": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Snack"},
@@ -43,7 +45,7 @@ PRODUCT_STYLES = {
 
 
 PRODUCT_IMAGE_FILES = {
-    "Agua": "agua",
+    "Agua SmartWater": "agua",
     "Jugo": "jugo",
     "Alfajor": "alfajor",
     "Galletitas": "galletitas",
@@ -62,11 +64,14 @@ class Aplicacion:
         self.productos = catalogo_inicial()
         self.carrito = []
         self.ventas = []
+        self.historial_ventas = []
         self.vista_actual = "inicio"
         self.imagenes_producto = {}
         self.nav_buttons = {}
         self.preview_labels = []
+        self.preview_offset = 0
         self.logo_image = None
+        self.touch_widgets = {}
 
 
         self.base_dir = Path(__file__).resolve().parent
@@ -81,11 +86,16 @@ class Aplicacion:
         ctk.set_default_color_theme("blue")
 
         self.ventana = ctk.CTk(fg_color=BG)
-        self.ventana.title("RecreoLab | Proyecto")
+        self.ventana.title("RecreoLab Minimalista")
         self.ventana.geometry("1280x800")
         self.ventana.minsize(1120, 720)
         self.ventana.grid_columnconfigure(0, weight=1)
-        self.ventana.grid_rowconfigure(1, weight=1)
+        self.ventana.grid_rowconfigure(0, weight=1)
+        self.ventana.iconbitmap(self.base_dir / "assets" / "logo.ico")
+
+        self.contenedor = ctk.CTkScrollableFrame(self.ventana, fg_color=BG, corner_radius=0)
+        self.contenedor.grid(row=0, column=0, sticky="nsew")
+        self.contenedor.grid_columnconfigure(0, weight=1)
 
         self.busqueda_var = ctk.StringVar(master=self.ventana, value="")
         self.categoria_var = ctk.StringVar(master=self.ventana, value="Todos")
@@ -98,12 +108,13 @@ class Aplicacion:
         self.crear_footer()
         self.cambiar_vista("inicio")
         self.refrescar()
+        self.rotar_preview()
 
     # Recursos visuales
     def crear_imagenes_producto(self):
     
         archivos = {
-            "Agua": "agua.png",
+            "Agua SmartWater": "agua.png",
             "Jugo": "jugo.png",
             "Alfajor": "alfajor.png",
             "Galletitas": "galletitas.png",
@@ -191,7 +202,7 @@ class Aplicacion:
     # Layout principal
     def crear_encabezado(self):
         self.header = ctk.CTkFrame(
-            self.ventana,
+            self.contenedor,
             fg_color=CARD,
             corner_radius=24,
             border_width=1,
@@ -225,7 +236,7 @@ class Aplicacion:
 
         ctk.CTkLabel(
             marca_wrap,
-            text="Una interfaz limpia y elegante para vender, consultar y decidir rápido.",
+            text="Bienvenido a nuestro kiosco virtual. Explora, compra y disfruta de nuestros productos.",
             font=(FONT, 14),
             text_color=TEXT_SECONDARY,
         ).grid(row=2, column=1, sticky="w")
@@ -243,6 +254,7 @@ class Aplicacion:
             ("inicio", "Inicio"),
             ("kiosco", "Kiosco"),
             ("presupuesto", "Presupuesto"),
+            ("reportes", "Reportes"),
         ]
         for columna, (clave, texto) in enumerate(botones):
             boton = ctk.CTkButton(
@@ -260,9 +272,13 @@ class Aplicacion:
             )
             boton.grid(row=0, column=columna, padx=5, pady=5)
             self.nav_buttons[clave] = boton
+            self.touch_widgets[boton] = {
+                "normal": {"width": 138, "height": 42, "font": (FONT, 13, "bold")},
+                "touch": {"width": 170, "height": 56, "font": (FONT, 15, "bold")},
+            }
 
     def crear_cuerpo(self):
-        self.body = ctk.CTkFrame(self.ventana, fg_color="transparent")
+        self.body = ctk.CTkFrame(self.contenedor, fg_color="transparent")
         self.body.grid(row=1, column=0, padx=24, pady=(2, 8), sticky="nsew")
         self.body.grid_columnconfigure(0, weight=1)
         self.body.grid_rowconfigure(0, weight=1)
@@ -285,13 +301,19 @@ class Aplicacion:
         self.frame_presupuesto.grid_columnconfigure(1, weight=2)
         self.frame_presupuesto.grid_rowconfigure(0, weight=1)
 
+        self.frame_reportes = ctk.CTkFrame(self.body, fg_color="transparent")
+        self.frame_reportes.grid(row=0, column=0, sticky="nsew")
+        self.frame_reportes.grid_columnconfigure(0, weight=1)
+        self.frame_reportes.grid_rowconfigure(0, weight=1)
+
         self.crear_inicio()
         self.crear_kiosco()
         self.crear_presupuesto()
+        self.crear_reportes()
 
     def crear_footer(self):
         footer = ctk.CTkFrame(
-            self.ventana,
+            self.contenedor,
             fg_color=CARD,
             corner_radius=18,
             border_width=1,
@@ -313,13 +335,16 @@ class Aplicacion:
         self.frame_inicio.grid_remove()
         self.frame_kiosco.grid_remove()
         self.frame_presupuesto.grid_remove()
+        self.frame_reportes.grid_remove()
 
         if vista == "inicio":
             self.frame_inicio.grid()
         elif vista == "kiosco":
             self.frame_kiosco.grid()
-        else:
+        elif vista == "presupuesto":
             self.frame_presupuesto.grid()
+        else:
+            self.frame_reportes.grid()
 
         for clave, boton in self.nav_buttons.items():
             if clave == vista:
@@ -343,7 +368,7 @@ class Aplicacion:
         badge.grid(row=0, column=0, padx=28, pady=(28, 16), sticky="w")
         ctk.CTkLabel(
             badge,
-            text="Nueva experiencia visual",
+            text="Un kiosco virtual en tu pantalla",
             font=(FONT, 12, "bold"),
             text_color=ACCENT,
         ).grid(row=0, column=0, padx=14, pady=8)
@@ -357,7 +382,7 @@ class Aplicacion:
 
         ctk.CTkLabel(
             hero,
-            text="Un kiosco con look moderno, pensado para navegar rápido, mostrar precios claros y transmitir una identidad más premium.",
+            text="Una simulación de un kiosco que te permite vender, consultar y decidir rápido.",
             font=(FONT, 16),
             text_color=TEXT_SECONDARY,
             justify="left",
@@ -367,7 +392,7 @@ class Aplicacion:
         acciones = ctk.CTkFrame(hero, fg_color="transparent")
         acciones.grid(row=3, column=0, padx=28, pady=(0, 18), sticky="w")
 
-        ctk.CTkButton(
+        boton_explorar = ctk.CTkButton(
             acciones,
             text="Explorar kiosco",
             command=partial(self.cambiar_vista, "kiosco"),
@@ -378,9 +403,14 @@ class Aplicacion:
             hover_color=BLACK_BUTTON_HOVER,
             text_color="white",
             font=(FONT, 14, "bold"),
-        ).grid(row=0, column=0, padx=(0, 10))
+        )
+        boton_explorar.grid(row=0, column=0, padx=(0, 10))
+        self.touch_widgets[boton_explorar] = {
+            "normal": {"width": 180, "height": 46, "font": (FONT, 14, "bold")},
+            "touch": {"width": 220, "height": 60, "font": (FONT, 16, "bold")},
+        }
 
-        ctk.CTkButton(
+        boton_presupuesto_home = ctk.CTkButton(
             acciones,
             text="Abrir presupuesto",
             command=partial(self.cambiar_vista, "presupuesto"),
@@ -391,7 +421,28 @@ class Aplicacion:
             hover_color="#E8E8ED",
             text_color=TEXT,
             font=(FONT, 14, "bold"),
-        ).grid(row=0, column=1)
+        )
+        boton_presupuesto_home.grid(row=0, column=1, padx=(0, 10))
+        self.touch_widgets[boton_presupuesto_home] = {
+            "normal": {"width": 180, "height": 46, "font": (FONT, 14, "bold")},
+            "touch": {"width": 220, "height": 60, "font": (FONT, 16, "bold")},
+        }
+
+        touch_wrap = ctk.CTkFrame(acciones, fg_color=CARD_MUTED, corner_radius=13)
+        touch_wrap.grid(row=0, column=2)
+        ctk.CTkLabel(
+            touch_wrap, text="Modo touch", font=(FONT, 12, "bold"), text_color=TEXT_SECONDARY
+        ).grid(row=0, column=0, padx=(12, 5), pady=10)
+        ctk.CTkSwitch(
+            touch_wrap,
+            text="",
+            variable=self.touch_var,
+            command=self.refrescar,
+            width=38,
+            button_color=CARD,
+            button_hover_color=CARD,
+            progress_color=ACCENT,
+        ).grid(row=0, column=1, padx=(0, 8), pady=8)
 
         highlights = ctk.CTkFrame(hero, fg_color="transparent")
         highlights.grid(row=4, column=0, padx=28, pady=(2, 22), sticky="ew")
@@ -441,7 +492,7 @@ class Aplicacion:
         )
         ctk.CTkLabel(
             side,
-            text="Algunos productos que se muestran en la experiencia renovada.",
+            text="Estos son algunos de nuestros productos:",
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
         ).grid(row=1, column=0, padx=22, pady=(0, 12), sticky="w")
@@ -464,7 +515,7 @@ class Aplicacion:
         box_quote.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="ew")
         ctk.CTkLabel(
             box_quote,
-            text='"Limpio, intuitivo y con un look más profesional."',
+            text='Traido a ustedes por:',
             font=(FONT, 14, "bold"),
             text_color=TEXT,
             justify="left",
@@ -472,7 +523,7 @@ class Aplicacion:
         ).grid(row=0, column=0, padx=18, pady=(16, 6), sticky="w")
         ctk.CTkLabel(
             box_quote,
-            text="Ideal para una entrega visual más fuerte y una demo mucho más atractiva.",
+            text="Nombres y apellidos de los integrantes del grupo.",
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
             justify="left",
@@ -508,12 +559,12 @@ class Aplicacion:
         top.grid(row=0, column=0, padx=22, pady=(22, 10), sticky="ew")
         top.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(top, text="Productos destacados", font=(FONT, 22, "bold"), text_color=TEXT).grid(
+        ctk.CTkLabel(top, text="Lista de Productos", font=(FONT, 22, "bold"), text_color=TEXT).grid(
             row=0, column=0, sticky="w"
         )
         ctk.CTkLabel(
             top,
-            text="Diseño visual con miniaturas, estados claros de stock y acciones simples.",
+            text="Estos son los productos que ofrecemos, mostrando su cantidad disponible y su precio.",
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
         ).grid(row=1, column=0, pady=(2, 0), sticky="w")
@@ -541,6 +592,10 @@ class Aplicacion:
         )
         self.buscador.grid(row=0, column=0, padx=(0, 10), sticky="ew")
         self.buscador.bind("<KeyRelease>", lambda _event: self.refrescar())
+        self.touch_widgets[self.buscador] = {
+            "normal": {"height": 42, "font": (FONT, 13)},
+            "touch": {"height": 54, "font": (FONT, 15)},
+        }
 
         self.categorias = ctk.CTkSegmentedButton(
             filtros,
@@ -557,22 +612,10 @@ class Aplicacion:
             font=(FONT, 12, "bold"),
         )
         self.categorias.grid(row=0, column=1, padx=(0, 10))
-
-        touch_wrap = ctk.CTkFrame(filtros, fg_color=CARD_MUTED, corner_radius=13)
-        touch_wrap.grid(row=0, column=2, sticky="e")
-        ctk.CTkLabel(
-            touch_wrap, text="Touch", font=(FONT, 12, "bold"), text_color=TEXT_SECONDARY
-        ).grid(row=0, column=0, padx=(12, 5), pady=10)
-        ctk.CTkSwitch(
-            touch_wrap,
-            text="",
-            variable=self.touch_var,
-            command=self.refrescar,
-            width=38,
-            button_color=CARD,
-            button_hover_color=CARD,
-            progress_color=ACCENT,
-        ).grid(row=0, column=1, padx=(0, 8), pady=8)
+        self.touch_widgets[self.categorias] = {
+            "normal": {"height": 40, "font": (FONT, 12, "bold")},
+            "touch": {"height": 52, "font": (FONT, 14, "bold")},
+        }
 
         self.catalogo = ctk.CTkScrollableFrame(
             catalogo_card,
@@ -606,6 +649,7 @@ class Aplicacion:
         self.metricas_compra.grid_columnconfigure((0, 1), weight=1)
         self.chip_items = self.crear_chip_horizontal(self.metricas_compra, 0, "Items", "0", wide=True)
         self.chip_ticket = self.crear_chip_horizontal(self.metricas_compra, 1, "Ticket", self.moneda(0), wide=True)
+        
 
         self.detalle = ctk.CTkTextbox(
             compra,
@@ -642,12 +686,16 @@ class Aplicacion:
             font=(FONT, 14, "bold"),
         )
         self.boton_vender.grid(row=5, column=0, padx=20, pady=(0, 10), sticky="ew")
+        self.touch_widgets[self.boton_vender] = {
+            "normal": {"height": 46, "font": (FONT, 14, "bold")},
+            "touch": {"height": 60, "font": (FONT, 16, "bold")},
+        }
 
         acciones = ctk.CTkFrame(compra, fg_color="transparent")
         acciones.grid(row=6, column=0, padx=20, pady=(0, 20), sticky="ew")
         acciones.grid_columnconfigure((0, 1), weight=1)
 
-        ctk.CTkButton(
+        boton_quitar = ctk.CTkButton(
             acciones,
             text="Quitar última",
             command=self.quitar,
@@ -657,9 +705,14 @@ class Aplicacion:
             hover_color="#E1E1E6",
             text_color=TEXT,
             font=(FONT, 13, "bold"),
-        ).grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        )
+        boton_quitar.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        self.touch_widgets[boton_quitar] = {
+            "normal": {"height": 40, "font": (FONT, 13, "bold")},
+            "touch": {"height": 54, "font": (FONT, 15, "bold")},
+        }
 
-        ctk.CTkButton(
+        boton_vaciar = ctk.CTkButton(
             acciones,
             text="Vaciar carrito",
             command=self.vaciar,
@@ -669,7 +722,12 @@ class Aplicacion:
             hover_color="#FFE2E2",
             text_color=DANGER,
             font=(FONT, 13, "bold"),
-        ).grid(row=0, column=1, padx=(5, 0), sticky="ew")
+        )
+        boton_vaciar.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+        self.touch_widgets[boton_vaciar] = {
+            "normal": {"height": 40, "font": (FONT, 13, "bold")},
+            "touch": {"height": 54, "font": (FONT, 15, "bold")},
+        }
 
     def crear_chip_horizontal(self, parent, column, titulo, valor, wide=False):
         chip = ctk.CTkFrame(
@@ -679,20 +737,26 @@ class Aplicacion:
             border_width=1,
             border_color=BORDER,
             width=170 if wide else 128,
-            height=64,
         )
         chip.grid(row=0, column=column, padx=(0 if column == 0 else 8, 0), sticky="ew")
-        chip.grid_propagate(False)
         chip.grid_columnconfigure(0, weight=1)
 
         titulo_lbl = ctk.CTkLabel(chip, text=titulo, font=(FONT, 11, "bold"), text_color=TEXT_SECONDARY)
-        titulo_lbl.grid(row=0, column=0, padx=14, pady=(12, 0), sticky="w")
+        titulo_lbl.grid(row=0, column=0, padx=14, pady=(12, 2), sticky="w")
 
         valor_lbl = ctk.CTkLabel(chip, text=valor, font=(FONT, 18, "bold"), text_color=TEXT)
-        valor_lbl.grid(row=1, column=0, padx=14, pady=(0, 10), sticky="w")
+        valor_lbl.grid(row=1, column=0, padx=14, pady=(0, 12), sticky="w")
 
         chip.value_label = valor_lbl
         return chip
+    
+    def actualizar_texto_categorias(self):
+        seleccionada = self.categoria_var.get()
+        for valor, boton in self.categorias._buttons_dict.items():
+            if valor == seleccionada:
+                boton.configure(text_color="white")
+            else:
+                boton.configure(text_color=TEXT)
 
     # Pantalla del Presupuesto 
     def crear_presupuesto(self):
@@ -743,8 +807,12 @@ class Aplicacion:
             font=(FONT, 15),
         )
         self.presupuesto.grid(row=1, column=0, padx=16, pady=(0, 16), sticky="ew")
+        self.touch_widgets[self.presupuesto] = {
+            "normal": {"height": 46, "font": (FONT, 15)},
+            "touch": {"height": 58, "font": (FONT, 17)},
+        }
 
-        ctk.CTkButton(
+        boton_sugerir = ctk.CTkButton(
             izquierda,
             text="Buscar combinaciones",
             command=self.sugerir,
@@ -753,7 +821,12 @@ class Aplicacion:
             fg_color=ACCENT,
             hover_color=ACCENT_HOVER,
             font=(FONT, 14, "bold"),
-        ).grid(row=3, column=0, padx=26, pady=(0, 14), sticky="ew")
+        )
+        boton_sugerir.grid(row=3, column=0, padx=26, pady=(0, 14), sticky="ew")
+        self.touch_widgets[boton_sugerir] = {
+            "normal": {"height": 46, "font": (FONT, 14, "bold")},
+            "touch": {"height": 60, "font": (FONT, 16, "bold")},
+        }
 
         self.opciones = ctk.CTkTextbox(
             izquierda,
@@ -782,8 +855,8 @@ class Aplicacion:
         )
 
         self.chip_opciones = self.crear_chip_vertical(derecha, 1, "Combinaciones", "0")
-        self.chip_minimo = self.crear_chip_vertical(derecha, 2, "Par más económico", "—")
-        self.chip_maximo = self.crear_chip_vertical(derecha, 3, "Par más alto", "—")
+        self.chip_minimo = self.crear_chip_vertical(derecha, 2, "Par más económico", "—", con_detalle=True)
+        self.chip_maximo = self.crear_chip_vertical(derecha, 3, "Par más alto", "—", con_detalle=True)
 
         ayuda = ctk.CTkFrame(derecha, fg_color=CARD_SOFT, corner_radius=18, border_width=1, border_color=BORDER)
         ayuda.grid(row=4, column=0, padx=20, pady=(8, 20), sticky="ew")
@@ -806,7 +879,144 @@ class Aplicacion:
 
         self.escribir(self.opciones, "Ingresá un presupuesto para ver opciones.")
 
-    def crear_chip_vertical(self, parent, row, titulo, valor):
+    # Pantalla de Reportes 
+    def crear_reportes(self):
+        contenedor = ctk.CTkFrame(
+            self.frame_reportes,
+            fg_color=CARD,
+            corner_radius=24,
+            border_width=1,
+            border_color=BORDER,
+        )
+        contenedor.grid(row=0, column=0, pady=8, sticky="nsew")
+        contenedor.grid_columnconfigure(0, weight=1)
+        contenedor.grid_rowconfigure(3, weight=1)
+
+        top = ctk.CTkFrame(contenedor, fg_color="transparent")
+        top.grid(row=0, column=0, padx=22, pady=(22, 10), sticky="ew")
+        top.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(top, text="Historial de ventas", font=(FONT, 22, "bold"), text_color=TEXT).grid(
+            row=0, column=0, sticky="w"
+        )
+        ctk.CTkLabel(
+            top,
+            text="Todas las ventas confirmadas en esta sesión, de la más reciente a la más vieja.",
+            font=(FONT, 13),
+            text_color=TEXT_SECONDARY,
+        ).grid(row=1, column=0, pady=(2, 0), sticky="w")
+
+        boton_vaciar_historial = ctk.CTkButton(
+            top,
+            text="Vaciar historial",
+            command=self.vaciar_historial,
+            width=150,
+            height=38,
+            corner_radius=12,
+            fg_color=DANGER_SOFT,
+            hover_color="#FFE2E2",
+            text_color=DANGER,
+            font=(FONT, 12, "bold"),
+        )
+        boton_vaciar_historial.grid(row=0, column=1, rowspan=2, sticky="e")
+        self.touch_widgets[boton_vaciar_historial] = {
+            "normal": {"height": 38, "font": (FONT, 12, "bold")},
+            "touch": {"height": 50, "font": (FONT, 14, "bold")},
+        }
+
+        chips = ctk.CTkFrame(contenedor, fg_color="transparent")
+        chips.grid(row=1, column=0, padx=22, pady=(0, 14), sticky="ew")
+        chips.grid_columnconfigure((0, 1, 2), weight=1)
+        self.chip_reportes_ventas = self.crear_chip_horizontal(chips, 0, "Ventas", "0", wide=True)
+        self.chip_reportes_importe = self.crear_chip_horizontal(chips, 1, "Importe total", self.moneda(0), wide=True)
+        self.chip_reportes_ticket = self.crear_chip_horizontal(chips, 2, "Ticket promedio", self.moneda(0), wide=True)
+
+        self.reportes_lista = ctk.CTkScrollableFrame(
+            contenedor,
+            fg_color="transparent",
+            scrollbar_button_color="#C7C7CC",
+            scrollbar_button_hover_color="#AEAEB2",
+        )
+        self.reportes_lista.grid(row=3, column=0, padx=14, pady=(0, 14), sticky="nsew")
+        self.reportes_lista.grid_columnconfigure(0, weight=1)
+
+        self.actualizar_reportes()
+
+    def actualizar_reportes(self):
+        for widget in self.reportes_lista.winfo_children():
+            widget.destroy()
+
+        cantidad = len(self.historial_ventas)
+        importe = sum(venta["total"] for venta in self.historial_ventas)
+        promedio = importe // cantidad if cantidad else 0
+
+        self.chip_reportes_ventas.value_label.configure(text=str(cantidad))
+        self.chip_reportes_importe.value_label.configure(text=self.moneda(importe))
+        self.chip_reportes_ticket.value_label.configure(text=self.moneda(promedio))
+
+        if not self.historial_ventas:
+            vacio = ctk.CTkFrame(self.reportes_lista, fg_color=CARD_SOFT, corner_radius=20, border_width=1, border_color=BORDER)
+            vacio.grid(row=0, column=0, padx=8, pady=16, sticky="ew")
+            ctk.CTkLabel(
+                vacio,
+                text="Todavía no hay ventas registradas.",
+                font=(FONT, 15, "bold"),
+                text_color=TEXT,
+            ).grid(row=0, column=0, padx=22, pady=(22, 4), sticky="w")
+            ctk.CTkLabel(
+                vacio,
+                text="Cuando confirmes una venta en el kiosco, va a aparecer acá.",
+                font=(FONT, 13),
+                text_color=TEXT_SECONDARY,
+            ).grid(row=1, column=0, padx=22, pady=(0, 22), sticky="w")
+            return
+
+        for fila, venta in enumerate(reversed(self.historial_ventas)):
+            numero = len(self.historial_ventas) - fila
+            card = ctk.CTkFrame(self.reportes_lista, fg_color=CARD_SOFT, corner_radius=18, border_width=1, border_color=BORDER)
+            card.grid(row=fila, column=0, padx=8, pady=6, sticky="ew")
+            card.grid_columnconfigure(0, weight=1)
+
+            encabezado = ctk.CTkFrame(card, fg_color="transparent")
+            encabezado.grid(row=0, column=0, padx=18, pady=(14, 4), sticky="ew")
+            encabezado.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(
+                encabezado,
+                text=f"Venta #{numero}  ·  {venta['hora'].strftime('%d/%m %H:%M')}",
+                font=(FONT, 14, "bold"),
+                text_color=TEXT,
+            ).grid(row=0, column=0, sticky="w")
+            ctk.CTkLabel(
+                encabezado,
+                text=self.moneda(venta["total"]),
+                font=(FONT, 16, "bold"),
+                text_color=TEXT,
+            ).grid(row=0, column=1, sticky="e")
+
+            detalle = " · ".join(f"{nombre} x{cantidad}" for nombre, cantidad, _precio in venta["items"])
+            ctk.CTkLabel(
+                card,
+                text=detalle,
+                font=(FONT, 12),
+                text_color=TEXT_SECONDARY,
+                justify="left",
+                wraplength=900,
+            ).grid(row=1, column=0, padx=18, pady=(0, 14), sticky="w")
+
+    def vaciar_historial(self):
+        if not self.historial_ventas:
+            return
+        respuesta = messagebox.askyesno(
+            "Vaciar historial",
+            "¿Seguro que querés borrar el historial de ventas de esta sesión?",
+            parent=self.ventana,
+        )
+        if respuesta:
+            self.historial_ventas.clear()
+            self.ventas.clear()
+            self.refrescar()
+
+    def crear_chip_vertical(self, parent, row, titulo, valor, con_detalle=False):
         chip = ctk.CTkFrame(parent, fg_color=CARD_MUTED, corner_radius=18, border_width=1, border_color=BORDER)
         chip.grid(row=row, column=0, padx=20, pady=6, sticky="ew")
         chip.grid_columnconfigure(0, weight=1)
@@ -815,8 +1025,14 @@ class Aplicacion:
             row=0, column=0, padx=16, pady=(14, 4), sticky="w"
         )
         value_label = ctk.CTkLabel(chip, text=valor, font=(FONT, 22, "bold"), text_color=TEXT)
-        value_label.grid(row=1, column=0, padx=16, pady=(0, 14), sticky="w")
+        value_label.grid(row=1, column=0, padx=16, pady=(0, 4 if con_detalle else 14), sticky="w")
         chip.value_label = value_label
+
+        if con_detalle:
+            detail_label = ctk.CTkLabel(chip, text="", font=(FONT, 12), text_color=TEXT_SECONDARY)
+            detail_label.grid(row=2, column=0, padx=16, pady=(0, 14), sticky="w")
+            chip.detail_label = detail_label
+
         return chip
 
     # Ayudadores 
@@ -831,20 +1047,42 @@ class Aplicacion:
         caja.configure(state="disabled")
 
     def actualizar_preview_inicio(self):
-        destacados = [p for p in self.productos if p.stock > 0][:4]
-        for idx, (thumb, label) in enumerate(self.preview_labels):
-            if idx < len(destacados):
-                producto = destacados[idx]
-                thumb.configure(text="", image=self.imagenes_producto[producto.codigo], fg_color="transparent")
-                label.configure(text=f"{producto.nombre}  ·  {self.moneda(producto.precio)}")
-            else:
+        destacados = [p for p in self.productos if p.stock > 0]
+        if not destacados:
+            for thumb, label in self.preview_labels:
                 thumb.configure(image=None, text="", fg_color="#F0F0F2")
                 label.configure(text="")
+            return
+        total = len(destacados)
+        for idx, (thumb, label) in enumerate(self.preview_labels):
+            producto = destacados[(self.preview_offset + idx) % total]
+            thumb.configure(text="", image=self.imagenes_producto[producto.codigo], fg_color="transparent")
+            label.configure(text=f"{producto.nombre}  ·  {self.moneda(producto.precio)}")
+
+    def rotar_preview(self):
+        if not self.ventana.winfo_exists():
+            return
+        destacados = [p for p in self.productos if p.stock > 0]
+        if destacados:
+            self.preview_offset = (self.preview_offset + len(self.preview_labels)) % len(destacados)
+        self.actualizar_preview_inicio()
+        self.ventana.after(3000, self.rotar_preview)
+
+    # Agranda o achica botones, entradas y filtros de toda la app según el switch de modo touch
+    def aplicar_modo_touch(self):
+        touch = self.touch_var.get()
+        clave = "touch" if touch else "normal"
+        for widget, tamanios in self.touch_widgets.items():
+            widget.configure(**tamanios[clave])
 
     # cosa para actualizar el seleccionado de productos  en la pantalla 
     def refrescar(self):
+        self.aplicar_modo_touch()
+
         for widget in self.catalogo.winfo_children():
             widget.destroy()
+        
+        self.actualizar_texto_categorias()
 
         stock_total = sum(producto.stock for producto in self.productos)
         self.chip_productos.value_label.configure(text=str(len(self.productos)))
@@ -853,6 +1091,7 @@ class Aplicacion:
         self.home_chip_stock.value_label.configure(text=str(stock_total))
         self.home_chip_ventas.value_label.configure(text=str(len(self.ventas)))
         self.actualizar_preview_inicio()
+        self.actualizar_reportes()
 
         termino = self.busqueda_var.get().strip().lower()
         categoria = self.categoria_var.get()
@@ -887,11 +1126,18 @@ class Aplicacion:
             columna = indice % 2
             fila = indice // 2
 
-            agotado = producto.stock == 0
-            bajo_stock = 0 < producto.stock <= 2
+            en_carrito = cantidad_en_carrito(self.carrito, producto.codigo)
+            disponible = max(producto.stock - en_carrito, 0)
 
-            if agotado:
+            sin_stock_real = producto.stock == 0
+            sin_stock_disponible = disponible == 0
+            bajo_stock = 0 < disponible <= 2
+
+            if sin_stock_real:
                 estado = "Agotado"
+                estado_color = TEXT_SECONDARY
+            elif sin_stock_disponible:
+                estado = "En tu carrito"
                 estado_color = TEXT_SECONDARY
             elif bajo_stock:
                 estado = "Últimas unidades"
@@ -899,6 +1145,8 @@ class Aplicacion:
             else:
                 estado = "Disponible"
                 estado_color = SUCCESS
+
+            agotado = sin_stock_disponible
 
             estilo = PRODUCT_STYLES.get(producto.nombre, {"category": "Producto"})
 
@@ -921,7 +1169,7 @@ class Aplicacion:
             ctk.CTkLabel(card, text=producto.nombre, font=(FONT, 18, "bold"), text_color=TEXT).grid(
                 row=1, column=1, padx=(0, 14), pady=(2, 2), sticky="w"
             )
-            ctk.CTkLabel(card, text=f"{estado} · Stock {producto.stock}", font=(FONT, 12), text_color=estado_color).grid(
+            ctk.CTkLabel(card, text=f"{estado} · Stock {disponible}", font=(FONT, 12), text_color=estado_color).grid(
                 row=2, column=1, padx=(0, 14), pady=(0, 8), sticky="w"
             )
 
@@ -946,7 +1194,7 @@ class Aplicacion:
             )
             boton.grid(row=0, column=1, sticky="e")
             if agotado:
-                boton.configure(state="disabled", text="Agotado")
+                boton.configure(state="disabled", text="Agotado" if sin_stock_real else "Sin stock")
 
         cantidad = len(self.carrito)
         total = total_carrito(self.carrito)
@@ -1081,21 +1329,36 @@ class Aplicacion:
         acciones = ctk.CTkFrame(card, fg_color="transparent")
         acciones.grid(row=6, column=0, padx=24, pady=(0, 24), sticky="ew")
         acciones.grid_columnconfigure((0, 1), weight=1)
+        touch = self.touch_var.get()
+        alto_boton = 58 if touch else 44
+        fuente_boton = (FONT, 15, "bold") if touch else (FONT, 13, "bold")
         ctk.CTkButton(
-            acciones, text="Volver", command=checkout.destroy, height=44, corner_radius=13,
-            fg_color=CARD_MUTED, hover_color="#E8E8ED", text_color=TEXT, font=(FONT, 13, "bold")
+            acciones, text="Volver", command=checkout.destroy, height=alto_boton, corner_radius=13,
+            fg_color=CARD_MUTED, hover_color="#E8E8ED", text_color=TEXT, font=fuente_boton
         ).grid(row=0, column=0, padx=(0, 6), sticky="ew")
         ctk.CTkButton(
-            acciones, text="Confirmar venta", command=lambda: self.confirmar_venta(checkout), height=44, corner_radius=13,
-            fg_color=BLACK_BUTTON, hover_color=BLACK_BUTTON_HOVER, text_color="white", font=(FONT, 13, "bold")
+            acciones, text="Confirmar venta", command=lambda: self.confirmar_venta(checkout), height=alto_boton, corner_radius=13,
+            fg_color=BLACK_BUTTON, hover_color=BLACK_BUTTON_HOVER, text_color="white", font=fuente_boton
         ).grid(row=0, column=1, padx=(6, 0), sticky="ew")
 
     def confirmar_venta(self, ventana_checkout):
+        resumen = {}
+        for producto in self.carrito:
+            if producto.codigo not in resumen:
+                resumen[producto.codigo] = [producto.nombre, 0, producto.precio]
+            resumen[producto.codigo][1] += 1
+
         try:
             total = confirmar(self.carrito, self.ventas)
         except ValueError as error:
             messagebox.showerror("No se registró", str(error), parent=ventana_checkout)
             return
+
+        self.historial_ventas.append({
+            "hora": datetime.now(),
+            "items": [tuple(item) for item in resumen.values()],
+            "total": total,
+        })
 
         ventana_checkout.destroy()
         self.refrescar()
@@ -1123,62 +1386,53 @@ class Aplicacion:
             )
             return
 
-        # IMPORTANTE: esta es la parte de combinaciones, cuidadito
+        # Busca combinaciones para cada cantidad posible de productos, de más a menos
         disponibles = [producto for producto in self.productos if producto.stock > 0]
+
+        # Límite de seguridad para evitar demasiadas combinaciones
+        LIMITE_PRODUCTOS = 20
+
+        # Si hay más de 20 productos, se toman solamente los 20 más baratos
+        if len(disponibles) > LIMITE_PRODUCTOS:
+            disponibles = sorted(disponibles, key=lambda producto: producto.precio)[:LIMITE_PRODUCTOS]
+
         opciones = []
+        for cantidad in range(len(disponibles), 1, -1):
+            for combo in combinations(disponibles, cantidad):
+                total = sum(producto.precio for producto in combo)
+                if total <= presupuesto:
+                    opciones.append((cantidad, combo, total, presupuesto-total))
 
-        for i in range(len(disponibles)):
-            for j in range(i + 1, len(disponibles)):
-                primero = disponibles[i]
-                segundo = disponibles[j]
-                total = primero.precio + segundo.precio
-
-                # Regla absoluta: si cuesta más que el presupuesto, no entra.
-                if total > presupuesto:
-                    continue
-
-                sobra = presupuesto - total
-                opciones.append((
-                    primero.nombre,
-                    segundo.nombre,
-                    primero.precio,
-                    segundo.precio,
-                    total,
-                    sobra,
-                ))
-
-        # mejores opciones (tipo las que te dejan más plata)
-        opciones.sort(key=lambda opcion: (-opcion[4], opcion[0], opcion[1]))
+        # más productos primero; dentro de cada cantidad, menos vuelto primero
+        opciones.sort(key=lambda opcion: (-opcion[0], opcion[3]))
 
         lineas = []
-        for primero, segundo, precio_1, precio_2, total, sobra in opciones:
-            # prohibe conbinaciones invalidas
-            if total > presupuesto or sobra < 0:
-                continue
-            lineas.append(
-                f"{primero} ({self.moneda(precio_1)}) + "
-                f"{segundo} ({self.moneda(precio_2)})\n"
-                f"Total: {self.moneda(total)}  ·  Te sobran {self.moneda(sobra)}"
-            )
+        cantidad_actual = None
+        for cantidad, combo, total, sobra in opciones:
+            if cantidad != cantidad_actual:
+                cantidad_actual = cantidad
+                etiqueta = "producto" if cantidad == 1 else "productos"
+                lineas.append(f"— {cantidad} {etiqueta} —")
+            nombres = " + ".join(f"{p.nombre} ({self.moneda(p.precio)})" for p in combo)
+            lineas.append(f"{nombres}\nTotal: {self.moneda(total)}  ·  Te sobran {self.moneda(sobra)}")
 
-        resultado = "\n\n".join(lineas) or "No hay pares disponibles para ese presupuesto."
+        resultado = "\n\n".join(lineas) or "No hay combinaciones posibles para ese presupuesto."
         self.escribir(self.opciones, resultado)
 
-        self.chip_opciones.value_label.configure(text=str(len(lineas)))
+        self.chip_opciones.value_label.configure(text=str(len(opciones)))
         if opciones:
-            validas = [opcion for opcion in opciones if opcion[4] <= presupuesto and opcion[5] >= 0]
-            if validas:
-                min_total = min(opcion[4] for opcion in validas)
-                max_total = max(opcion[4] for opcion in validas)
-                self.chip_minimo.value_label.configure(text=self.moneda(min_total))
-                self.chip_maximo.value_label.configure(text=self.moneda(max_total))
-            else:
-                self.chip_minimo.value_label.configure(text="—")
-                self.chip_maximo.value_label.configure(text="—")
+            min_opcion = min(opciones, key=lambda opcion: opcion[2])
+            max_opcion = max(opciones, key=lambda opcion: opcion[2])
+            self.chip_minimo.value_label.configure(text=self.moneda(min_opcion[2]))
+            self.chip_minimo.detail_label.configure(text=" + ".join(p.nombre for p in min_opcion[1]))
+            self.chip_maximo.value_label.configure(text=self.moneda(max_opcion[2]))
+            self.chip_maximo.detail_label.configure(text=" + ".join(p.nombre for p in max_opcion[1]))
         else:
             self.chip_minimo.value_label.configure(text="—")
+            self.chip_minimo.detail_label.configure(text="")
             self.chip_maximo.value_label.configure(text="—")
-
+            self.chip_maximo.detail_label.configure(text="")
+            
     def ejecutar(self):
         self.ventana.mainloop()
 
