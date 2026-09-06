@@ -12,11 +12,24 @@ class Producto:
 def catalogo_inicial():
     return [
         Producto("A01", "Agua SmartWater", 1600, 8),
-        Producto("A02", "Jugo", 2100, 6),
-        Producto("A03", "Alfajor", 500, 10),
-        Producto("A04", "Galletitas", 1200, 2),
-        Producto("A05", "Barrita", 1200, 2),
-        Producto("A06", "Caramelos", 150, 0),
+        Producto("A02", "Jugo Aquarius", 2100, 6),
+        Producto("A03", "Alfajor Guaymallen", 500, 10),
+        Producto("A04", "Galletitas Pitusas", 1200, 2),
+        Producto("A05", "Barrita Cereal Mix", 800, 5),
+        Producto("A06", "Palitos de la Selva", 1500, 3),
+        Producto("A07", "Chocolates Bon o Bon", 1100, 4),
+        Producto("A08", "Gaseosa Coca-Cola", 3500, 7),
+        Producto("A09", "Galletitas Oreo", 1700, 9),
+        Producto("A10", "Chocolates Milka", 3500, 1),
+        Producto("A12", "Hamburguesa Simple", 4000, 5),
+        Producto("A13", "Pancho Simple", 1200, 10),
+        Producto("A14", "Papas Fritas Krachitos", 2500, 2),
+        Producto("A15", "Gomitas Mogul", 500, 6),
+        Producto("A16", "Pipas", 480, 4),
+        Producto("A17", "Don Satur (Grasa)", 1500, 3),
+        Producto("A18", "Jugo Cepita", 3500, 5),
+        Producto("A19", "Galletitas Chocolinas", 2500, 7),
+        Producto("A20", "Alfajor Rasta", 1700, 9),
         
     ]
 

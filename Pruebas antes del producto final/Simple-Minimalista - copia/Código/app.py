@@ -5,7 +5,7 @@ from itertools import combinations
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pathlib import Path
-from modelo import catalogo_inicial, agregar, confirmar, total_carrito, cantidad_en_carrito
+from modelo import catalogo_inicial, agregar, confirmar, total_carrito, cantidad_en_carrito, buscar
 
 
 #Colores para la interfaz
@@ -36,22 +36,49 @@ FONT = "Segoe UI"
 
 PRODUCT_STYLES = {
     "Agua SmartWater": {"bg": BLUE_SOFT, "fg": ACCENT, "category": "Bebida"},
-    "Jugo": {"bg": ORANGE_SOFT, "fg": "#D96B00", "category": "Bebida"},
-    "Alfajor": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Snack"},
-    "Galletitas": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Snack"},
-    "Barrita": {"bg": GREEN_SOFT, "fg": "#3F8F4F", "category": "Energía"},
-    "Caramelos": {"bg": PINK_SOFT, "fg": "#C03B80", "category": "Dulce"},
+    "Jugo Aquarius": {"bg": ORANGE_SOFT, "fg": "#D96B00", "category": "Bebida"},
+    "Alfajor Guaymallen": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Snack"},
+    "Galletitas Pitusas": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Snack"},
+    "Barrita Cereal Mix": {"bg": GREEN_SOFT, "fg": "#3F8F4F", "category": "Energía"},
+    "Palitos de la Selva": {"bg": PINK_SOFT, "fg": "#C03B80", "category": "Dulce"},
+    "Chocolates Bon o Bon": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Dulce"}, 
+    "Gaseosa Coca-Cola": {"bg": BLUE_SOFT, "fg": "#D70015", "category": "Bebida"},
+    "Galletitas Oreo": {"bg": BLUE_SOFT, "fg": "#0071E3", "category": "Snack"},
+    "Chocolates Milka": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Dulce"},  
+    "Hamburguesa Simple": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Snack"},
+    "Pancho Simple": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Snack"},
+    "Papas Fritas Krachitos": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Snack"},
+    "Gomitas Mogul": {"bg": PINK_SOFT, "fg": "#C03B80", "category": "Dulce"},
+    "Pipas": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Snack"},
+    "Don Satur (Grasa)": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Snack"},
+    "Jugo Cepita": {"bg": ORANGE_SOFT, "fg": "#D96B00", "category": "Bebida"},
+    "Galletitas Chocolinas": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Snack"},
+    "Alfajor Rasta": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Dulce"}, 
 }
 
 
 PRODUCT_IMAGE_FILES = {
     "Agua SmartWater": "agua",
-    "Jugo": "jugo",
-    "Alfajor": "alfajor",
-    "Galletitas": "galletitas",
-    "Barrita": "barrita",
-    "Caramelos": "caramelos",
+    "Jugo Aquarius": "jugo",
+    "Alfajor Guaymallen": "alfajor",
+    "Galletitas Pitusas": "galletitas",
+    "Barrita Cereal Mix": "barrita",
+    "Palitos de la Selva": "caramelos",
+    "Chocolates Bon o Bon": "BonOBon",
+    "Gaseosa Coca-Cola": "Cocacola",
+    "Galletitas Oreo": "galletitas_oreo",
+    "Chocolates Milka": "chocolates_milka",
+    "Hamburguesa Simple": "hamburguesa.png",
+    "Pancho Simple": "pancho.png",
+    "Papas Fritas Krachitos": "papas.png",
+    "Gomitas Mogul": "gomitas.png",
+    "Pipas": "pipas.png",
+    "Don Satur (Grasa)": "don_satur.png",
+    "Jugo Cepita": "jugo_cepita.png",
+    "Galletitas Chocolinas": "galletitas_chocolinas.png",
+    "Alfajor Rasta": "alfajor_rasta.png" 
 }
+
 
 
 PRODUCT_IMAGE_DISPLAY_SIZE = (112, 112)
@@ -117,12 +144,24 @@ class Aplicacion:
     
         archivos = {
             "Agua SmartWater": "agua.png",
-            "Jugo": "jugo.png",
-            "Alfajor": "alfajor.png",
-            "Galletitas": "galletitas.png",
-            "Barrita": "barrita.png",
-            "Caramelos": "caramelos.png",
-            
+            "Jugo Aquarius": "jugo.png",
+            "Alfajor Guaymallen": "alfajor.png",
+            "Galletitas Pitusas": "galletitas.png",
+            "Barrita Cereal Mix": "barrita.png",
+            "Palitos de la Selva": "caramelos.png",
+            "Chocolates Bon o Bon": "chocolates.png",
+            "Gaseosa Coca-Cola": "gaseosa.png",
+            "Galletitas Oreo": "galletitas_oreo.png",
+            "Chocolates Milka": "chocolates_milka.png",
+            "Hamburguesa Simple": "hamburguesa.png",
+            "Pancho Simple": "pancho.png",
+            "Papas Fritas Krachitos": "papas.png",
+            "Gomitas Mogul": "gomitas.png",
+            "Pipas": "pipas.png",
+            "Don Satur (Grasa)": "don_satur.png",
+            "Jugo Cepita": "jugo_cepita.png",
+            "Galletitas Chocolinas": "galletitas_chocolinas.png",
+            "Alfajor Rasta": "alfajor_rasta.png"
         }
 
         faltantes = []
@@ -257,6 +296,7 @@ class Aplicacion:
             ("kiosco", "Kiosco"),
             ("presupuesto", "Presupuesto"),
             ("reportes", "Reportes"),
+            ("inventario", "Inventario"),
         ]
         for columna, (clave, texto) in enumerate(botones):
             boton = ctk.CTkButton(
@@ -307,11 +347,17 @@ class Aplicacion:
         self.frame_reportes.grid(row=0, column=0, sticky="nsew")
         self.frame_reportes.grid_columnconfigure(0, weight=1)
         self.frame_reportes.grid_rowconfigure(0, weight=1)
-
+        
+        self.frame_inventario = ctk.CTkFrame(self.body, fg_color="transparent")
+        self.frame_inventario.grid(row=0, column=0, sticky="nsew")
+        self.frame_inventario.grid_columnconfigure(0, weight=1)
+        self.frame_inventario.grid_rowconfigure(0, weight=1)
+    
         self.crear_inicio()
         self.crear_kiosco()
         self.crear_presupuesto()
         self.crear_reportes()
+        self.crear_inventario()
 
     def crear_footer(self):
         footer = ctk.CTkFrame(
@@ -338,6 +384,7 @@ class Aplicacion:
         self.frame_kiosco.grid_remove()
         self.frame_presupuesto.grid_remove()
         self.frame_reportes.grid_remove()
+        self.frame_inventario.grid_remove()
 
         if vista == "inicio":
             self.frame_inicio.grid()
@@ -345,6 +392,8 @@ class Aplicacion:
             self.frame_kiosco.grid()
         elif vista == "presupuesto":
             self.frame_presupuesto.grid()
+        elif vista == "inventario":
+            self.frame_inventario.grid()
         else:
             self.frame_reportes.grid()
 
@@ -1059,6 +1108,107 @@ class Aplicacion:
             self.historial_ventas.clear()
             self.ventas.clear()
             self.refrescar()
+        # Pantalla de Inventario
+    def crear_inventario(self):
+        contenedor = ctk.CTkFrame(
+            self.frame_inventario,
+            fg_color=CARD,
+            corner_radius=24,
+            border_width=1,
+            border_color=BORDER,
+        )
+        contenedor.grid(row=0, column=0, pady=8, sticky="nsew")
+        contenedor.grid_columnconfigure(0, weight=1)
+        contenedor.grid_rowconfigure(1, weight=1)
+
+        top = ctk.CTkFrame(contenedor, fg_color="transparent")
+        top.grid(row=0, column=0, padx=22, pady=(22, 10), sticky="ew")
+        top.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(top, text="Inventario", font=(FONT, 22, "bold"), text_color=TEXT).grid(
+            row=0, column=0, sticky="w"
+        )
+        ctk.CTkLabel(
+            top,
+            text="Reponé stock de cualquier producto del catálogo, incluidos los que agregues a futuro.",
+            font=(FONT, 13),
+            text_color=TEXT_SECONDARY,
+        ).grid(row=1, column=0, pady=(2, 0), sticky="w")
+
+        self.inventario_lista = ctk.CTkFrame(contenedor, fg_color="transparent")
+        self.inventario_lista.grid(row=1, column=0, padx=14, pady=(0, 22), sticky="nsew")
+        self.inventario_lista.grid_columnconfigure(0, weight=1)
+        self.actualizar_inventario()
+
+    def actualizar_inventario(self):
+        for widget in self.inventario_lista.winfo_children():
+            widget.destroy()
+
+        self.inventario_entries = {}
+
+        if not self.productos:
+            ctk.CTkLabel(
+                self.inventario_lista, text="No hay productos cargados en el catálogo.",
+                font=(FONT, 13), text_color=TEXT_SECONDARY,
+            ).grid(row=0, column=0, padx=8, pady=16, sticky="w")
+            return
+
+        for fila, producto in enumerate(self.productos):
+            card = ctk.CTkFrame(
+                self.inventario_lista, fg_color=CARD_SOFT, corner_radius=16,
+                border_width=1, border_color=BORDER,
+            )
+            card.grid(row=fila, column=0, padx=8, pady=6, sticky="ew")
+            card.grid_columnconfigure(0, weight=1)
+
+            info = ctk.CTkFrame(card, fg_color="transparent")
+            info.grid(row=0, column=0, padx=16, pady=14, sticky="w")
+            ctk.CTkLabel(info, text=producto.nombre, font=(FONT, 14, "bold"), text_color=TEXT).grid(
+                row=0, column=0, sticky="w"
+            )
+            ctk.CTkLabel(
+                info, text=f"Código {producto.codigo}  ·  Stock actual: {producto.stock}",
+                font=(FONT, 12), text_color=TEXT_SECONDARY,
+            ).grid(row=1, column=0, sticky="w", pady=(2, 0))
+
+            entrada = ctk.CTkEntry(card, placeholder_text="Cantidad", width=90, height=36)
+            entrada.grid(row=0, column=1, padx=(8, 8), pady=14)
+            self.inventario_entries[producto.codigo] = entrada
+
+            boton = ctk.CTkButton(
+                card, text="Reponer", width=100, height=36, corner_radius=10,
+                fg_color=ACCENT, hover_color=ACCENT_HOVER, text_color="white",
+                font=(FONT, 12, "bold"),
+                command=partial(self.reponer_stock, producto.codigo),
+            )
+            boton.grid(row=0, column=2, padx=(0, 16), pady=14)
+
+    def reponer_stock(self, codigo):
+        entrada = self.inventario_entries.get(codigo)
+        if entrada is None:
+            return
+
+        texto = entrada.get().strip()
+        try:
+            cantidad = int(texto)
+            if cantidad <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showwarning(
+                "Cantidad inválida",
+                "Ingresá un número entero mayor a cero para reponer.",
+                parent=self.ventana,
+            )
+            return
+
+        producto = buscar(self.productos, codigo)
+        producto.stock += cantidad
+        self.refrescar()
+        messagebox.showinfo(
+            "Stock actualizado",
+            f"Se repusieron {cantidad} unidades de {producto.nombre}.\nStock actual: {producto.stock}.",
+            parent=self.ventana,
+        )
 
     def crear_chip_vertical(self, parent, row, titulo, valor, con_detalle=False):
         chip = ctk.CTkFrame(parent, fg_color=CARD_MUTED, corner_radius=18, border_width=1, border_color=BORDER)
@@ -1136,6 +1286,7 @@ class Aplicacion:
         self.home_chip_ventas.value_label.configure(text=str(len(self.ventas)))
         self.actualizar_preview_inicio()
         self.actualizar_reportes()
+        self.actualizar_inventario()
 
         termino = self.busqueda_var.get().strip().lower()
         categoria = self.categoria_var.get()

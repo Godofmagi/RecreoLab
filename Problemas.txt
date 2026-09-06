@@ -1,4 +1,3 @@
-agregar mas productos (lo que podamos) tal vez categorias
+agregar mas productos (lo que podamos) tal vez categorías (20 productos hay en total)
 sonidos?
 capaz crear apk
-reponer stock inventario
