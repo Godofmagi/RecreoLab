@@ -1,3 +1,5 @@
-agregar mas productos (lo que podamos) tal vez categorías (20 productos hay en total)
-sonidos?
+Limitador a la cant. de combinaciones
+modo oscuro
+descargar pdf en reportes
 capaz crear apk
+actualizar ejecutable

@@ -1,12 +1,23 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from functools import partial
 from itertools import combinations
 from datetime import datetime
+from fpdf import FPDF
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pathlib import Path
 from modelo import catalogo_inicial, agregar, confirmar, total_carrito, cantidad_en_carrito, buscar
 
+
+class ReportePDF(FPDF):
+    def header(self):
+        self.set_font("Helvetica", "B", 16)
+        self.set_text_color(29, 29, 31)
+        self.cell(0, 10, "RecreoLab - Reporte de ventas", ln=1, align="C")
+        self.set_font("Helvetica", "", 10)
+        self.set_text_color(110, 110, 110)
+        self.cell(0, 6, f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=1, align="C")
+        self.ln(4)
 
 #Colores para la interfaz
 BG = "#F5F5F7"
@@ -45,8 +56,8 @@ PRODUCT_STYLES = {
     "Gaseosa Coca-Cola": {"bg": BLUE_SOFT, "fg": "#D70015", "category": "Bebida"},
     "Galletitas Oreo": {"bg": BLUE_SOFT, "fg": "#0071E3", "category": "Snack"},
     "Chocolates Milka": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Dulce"},  
-    "Hamburguesa Simple": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Snack"},
-    "Pancho Simple": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Snack"},
+    "Hamburguesa Simple": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Comida Rapida"},
+    "Pancho Simple": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Comida Rapida"},
     "Papas Fritas Krachitos": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Snack"},
     "Gomitas Mogul": {"bg": PINK_SOFT, "fg": "#C03B80", "category": "Dulce"},
     "Pipas": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Snack"},
@@ -54,6 +65,18 @@ PRODUCT_STYLES = {
     "Jugo Cepita": {"bg": ORANGE_SOFT, "fg": "#D96B00", "category": "Bebida"},
     "Galletitas Chocolinas": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Snack"},
     "Alfajor Rasta": {"bg": BROWN_SOFT, "fg": "#8A5B33", "category": "Dulce"}, 
+    "Pebete": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Comida Rapida"},
+    "Empanadas de carne": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Comida Rapida"},
+    "Sprite": {"bg": BLUE_SOFT, "fg": "#0071E3", "category": "Bebida"},
+    "Surtido Bagley": {"bg": PURPLE_SOFT, "fg": "#6F42C1", "category": "Snack"},
+    "Manaos cola": {"bg": BLUE_SOFT, "fg": "#0071E3", "category": "Bebida"},
+    "Placer": {"bg": PINK_SOFT, "fg": "#C03B80", "category": "Dulce"},
+    "Helado de Agua Grido": {"bg": BLUE_SOFT, "fg": "#0071E3", "category": "Dulce"},
+    "Cono de helado": {"bg": BLUE_SOFT, "fg": "#0071E3", "category": "Dulce"},
+    "Chicle beldent": {"bg": PINK_SOFT, "fg": "#C03B80", "category": "Dulce"},
+    "Cono de Papas": {"bg": ORANGE_SOFT, "fg": "#B26A00", "category": "Comida Rapida"},
+    "Pico dulce": {"bg": PINK_SOFT, "fg": "#C03B80", "category": "Dulce"}
+    
 }
 
 
@@ -76,7 +99,19 @@ PRODUCT_IMAGE_FILES = {
     "Don Satur (Grasa)": "don_satur.png",
     "Jugo Cepita": "jugo_cepita.png",
     "Galletitas Chocolinas": "galletitas_chocolinas.png",
-    "Alfajor Rasta": "alfajor_rasta.png" 
+    "Alfajor Rasta": "alfajor_rasta.png", 
+    "Pebete": "pebete.png",
+    "Empanadas de carne" :"empanada.png",
+    "Sprite" : "sprite.png",
+    "Surtido Bagley" : "surtido.png",
+    "Manaos cola" : "manaos.png",
+    "Placer": "placer.png",
+    "Helado de agua Grido":"helado.png",
+    "Cono de helado":"helado cono.png",
+    "Chicle Beldent":"chicle beldent.png",
+    "Cono de Papas":"cono papas.png",
+    "Pico Dulce":"pico dulce.png"
+    
 }
 
 
@@ -161,7 +196,18 @@ class Aplicacion:
             "Don Satur (Grasa)": "don_satur.png",
             "Jugo Cepita": "jugo_cepita.png",
             "Galletitas Chocolinas": "galletitas_chocolinas.png",
-            "Alfajor Rasta": "alfajor_rasta.png"
+            "Alfajor Rasta": "alfajor_rasta.png",
+            "Pebete": "pebete.png",
+            "Empanadas de carne": "empanada.png",
+            "Sprite": "sprite.png",
+            "Surtido Bagley": "surtido.png",
+            "Manaos cola": "manaos.png",
+            "Placer": "placer.png",
+            "Helado de Agua Grido": "helado.png",
+            "Cono de helado": "helado cono.png",
+            "Chicle beldent": "chicle beldent.png",
+            "Cono de Papas": "cono papas.png",
+            "Pico dulce": "pico dulce.png",
         }
 
         faltantes = []
@@ -277,7 +323,7 @@ class Aplicacion:
 
         ctk.CTkLabel(
             marca_wrap,
-            text="Bienvenido a nuestro kiosco virtual. Explora, compra y disfruta de nuestros productos.",
+            text="Explora, compra y disfruta de nuestros productos.",
             font=(FONT, 14),
             text_color=TEXT_SECONDARY,
         ).grid(row=2, column=1, sticky="w")
@@ -574,7 +620,7 @@ class Aplicacion:
         ).grid(row=0, column=0, padx=18, pady=(16, 6), sticky="w")
         ctk.CTkLabel(
             box_quote,
-            text="Nombres y apellidos de los integrantes del grupo.",
+            text="Borgazzi Dante y Revainera Thiago.",
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
             justify="left",
@@ -650,7 +696,7 @@ class Aplicacion:
 
         self.categorias = ctk.CTkSegmentedButton(
             filtros,
-            values=["Todos", "Bebida", "Snack", "Energía", "Dulce"],
+            values=["Todos", "Bebida", "Snack", "Energía", "Dulce","Comida Rapida"],
             variable=self.categoria_var,
             command=lambda _value: self.refrescar(),
             height=40,
@@ -956,6 +1002,24 @@ class Aplicacion:
             font=(FONT, 13),
             text_color=TEXT_SECONDARY,
         ).grid(row=1, column=0, pady=(2, 0), sticky="w")
+        
+        boton_descargar_reporte = ctk.CTkButton(
+            top,
+            text="Descargar reporte",
+            command=self.descargar_reporte,
+            width=170,
+            height=38,
+            corner_radius=12,
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
+            text_color="white",
+            font=(FONT, 12, "bold"),
+        )
+        boton_descargar_reporte.grid(row=0, column=1, rowspan=2, sticky="e", padx=(0, 10))
+        self.touch_widgets[boton_descargar_reporte] = {
+            "normal": {"height": 38, "font": (FONT, 12, "bold")},
+            "touch": {"height": 50, "font": (FONT, 14, "bold")},
+        }
 
         boton_vaciar_historial = ctk.CTkButton(
             top,
@@ -969,7 +1033,7 @@ class Aplicacion:
             text_color=DANGER,
             font=(FONT, 12, "bold"),
         )
-        boton_vaciar_historial.grid(row=0, column=1, rowspan=2, sticky="e")
+        boton_vaciar_historial.grid(row=0, column=2, rowspan=2, sticky="e")
         self.touch_widgets[boton_vaciar_historial] = {
             "normal": {"height": 38, "font": (FONT, 12, "bold")},
             "touch": {"height": 50, "font": (FONT, 14, "bold")},
@@ -1096,6 +1160,79 @@ class Aplicacion:
                 wraplength=900,
             ).grid(row=1, column=0, padx=18, pady=(0, 14), sticky="w")
 
+    def descargar_reporte(self):
+        if not self.historial_ventas:
+            messagebox.showwarning(
+                "Sin ventas",
+                "Todavía no se registró ninguna venta en esta sesión.",
+                parent=self.ventana,
+            )
+            return
+
+        ruta = filedialog.asksaveasfilename(
+            parent=self.ventana,
+            title="Guardar reporte de ventas",
+            defaultextension=".pdf",
+            filetypes=[("Archivo PDF", "*.pdf")],
+            initialfile=f"RecreoLab_ventas_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+        )
+        if not ruta:
+            return
+
+        try:
+            pdf = ReportePDF()
+            pdf.add_page()
+
+            importe_total = 0
+            for numero, venta in enumerate(self.historial_ventas, start=1):
+                hora = venta["hora"].strftime("%d/%m/%Y %H:%M:%S")
+                importe_total += venta["total"]
+
+                pdf.set_font("Helvetica", "B", 12)
+                pdf.set_text_color(0, 113, 227)
+                pdf.cell(0, 8, f"Venta N° {numero}  -  {hora}", ln=1)
+
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.set_text_color(29, 29, 31)
+                pdf.set_fill_color(240, 240, 242)
+                pdf.cell(90, 7, "Producto", border=1, fill=True)
+                pdf.cell(30, 7, "Cantidad", border=1, fill=True, align="C")
+                pdf.cell(30, 7, "Precio", border=1, fill=True, align="R")
+                pdf.cell(30, 7, "Subtotal", border=1, fill=True, align="R")
+                pdf.ln()
+
+                pdf.set_font("Helvetica", "", 10)
+                for nombre, cantidad, precio in venta["items"]:
+                    pdf.cell(90, 7, nombre, border=1)
+                    pdf.cell(30, 7, str(cantidad), border=1, align="C")
+                    pdf.cell(30, 7, self.moneda(precio), border=1, align="R")
+                    pdf.cell(30, 7, self.moneda(cantidad * precio), border=1, align="R")
+                    pdf.ln()
+
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.cell(150, 8, "Total de la venta", border=1, align="R")
+                pdf.cell(30, 8, self.moneda(venta["total"]), border=1, align="R")
+                pdf.ln(12)
+
+            pdf.set_font("Helvetica", "B", 13)
+            pdf.set_text_color(0, 113, 227)
+            pdf.cell(0, 10, f"Importe total de la sesion: {self.moneda(importe_total)}", ln=1)
+
+            pdf.output(ruta)
+        except OSError as error:
+            messagebox.showerror(
+                "No se pudo guardar",
+                f"Ocurrió un error al guardar el archivo:\n{error}",
+                parent=self.ventana,
+            )
+            return
+
+        messagebox.showinfo(
+            "Reporte descargado",
+            f"Se guardó el reporte con {len(self.historial_ventas)} ventas en:\n{ruta}",
+            parent=self.ventana,
+        )
+
     def vaciar_historial(self):
         if not self.historial_ventas:
             return
@@ -1108,6 +1245,8 @@ class Aplicacion:
             self.historial_ventas.clear()
             self.ventas.clear()
             self.refrescar()
+    
+    
         # Pantalla de Inventario
     def crear_inventario(self):
         contenedor = ctk.CTkFrame(
